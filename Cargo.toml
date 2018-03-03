@@ -1,0 +1,8 @@
+[package]
+name = "raycaster"
+version = "0.1.0"
+authors = ["Ed"]
+
+[dependencies]
+sdl2 = "0.31"
+cgmath = "0.16.0"
