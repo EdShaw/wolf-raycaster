@@ -36,25 +36,36 @@ pub fn main() {
 
     let grid_size = 1.0;
 
+    #[derive(Copy, Clone)]
+    enum LevelTile {
+        Color(u8, u8, u8), // RGB
+        Empty,
+    }
+
+    const RED_TILE : LevelTile = LevelTile::Color(255,0,0);
+    const GRE_TILE : LevelTile = LevelTile::Color(0,255,0);
+    const BLU_TILE : LevelTile = LevelTile::Color(0,0,255);
+    const EMPTY    : LevelTile = LevelTile::Empty;
+
     const LEVEL_WIDTH  : usize = 16;
     const LEVEL_HEIGHT : usize = 32;
-    let level : [[bool ; LEVEL_HEIGHT] ; LEVEL_WIDTH] = [
-        [true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true],
-        [true,  true,  false, false, false, false, false, false, false, false, false, false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true],
-        [true,  false, false, false, false, false, false, false, false, false, false, false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true],
-        [true,  false, false, false, false, false, false, false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, false, true],
-        [true,  false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, false, true],
-        [true,  false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, false, true],
-        [true,  true,  false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, false, true],
-        [true,  true,  true,  true,  true,  true,  true,  true,  false, false, false, true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  false, false, true],
-        [true,  true,  true,  true,  true,  true,  true,  true,  false, false, false, true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  false, false, true],
-        [true,  true,  false, false, false, false, false, false, false, false, false, false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true],
-        [true,  false, false, false, false, false, false, false, false, false, false, false, true,  false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true],
-        [true,  false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, false, true],
-        [true,  false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, false, true],
-        [true,  false, false, false, false, false, true,  false, false, false, false, false, false, false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, false, true],
-        [true,  true,  false, false, false, false, true,  false, false, false, false, false, false, false, false, false, false, false, true,  false, false, false, false, false, true,  false, false, false, false, false, false, true],
-        [true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true,  true],
+    let level : [[LevelTile ; LEVEL_HEIGHT] ; LEVEL_WIDTH] = [
+        [RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE],
+        [RED_TILE, RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+        [RED_TILE, GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+        [RED_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, EMPTY   , EMPTY   , EMPTY   , BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, EMPTY   , EMPTY   , RED_TILE],
+        [RED_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, EMPTY   , EMPTY   , EMPTY   , BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, EMPTY   , EMPTY   , RED_TILE],
+        [RED_TILE, GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+        [RED_TILE, RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+        [RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE],
     ];
 
     // const LEVEL_WIDTH  : usize = 8;
@@ -70,11 +81,11 @@ pub fn main() {
     //     [true,  false, false, false, false, false, true,  true ],    
     // ];
 
-    fn get_tile(level : [[bool ; LEVEL_HEIGHT] ; LEVEL_WIDTH], coord : Point2<i32>) -> bool {
+    fn get_tile(ref level : &[[LevelTile ; LEVEL_HEIGHT] ; LEVEL_WIDTH], coord : Point2<i32>) -> LevelTile {
         if coord.x >= 0 && coord.x < (LEVEL_WIDTH as i32) && coord.y >= 0 && coord.y < (LEVEL_HEIGHT as i32) {
             level[coord.x as usize][coord.y as usize]
         } else {
-            false
+            EMPTY
         }
     }
 
@@ -128,9 +139,6 @@ pub fn main() {
         canvas.set_draw_color(Color::RGB(50, 50, 50));
         canvas.fill_rect(Some((0, (height/2) as i32, width, height/2).into())).unwrap();
 
-        canvas.set_draw_color(Color::RGB(255, 0, 0));
-
-
         let cam_coord : Point2<i32> = (cam_pos / grid_size).cast().unwrap();
         
         let plane_vec = Vector2::new(-cam_dir.y, cam_dir.x);
@@ -153,7 +161,7 @@ pub fn main() {
             );
 
             let mut current_coord = cam_coord.clone();
-            let mut hit : Option<Axis> = None;
+            let mut hit : Option<(Axis, LevelTile)> = None;
             for _iter in 0..(LEVEL_HEIGHT+LEVEL_WIDTH) {
                 let pot_hit : Axis;
                 if side_dist.x < side_dist.y {
@@ -166,36 +174,42 @@ pub fn main() {
                     pot_hit = Axis::Y
                 }
 
-                if get_tile(level, current_coord.cast().unwrap()) {
-                    hit = Some(pot_hit);
+                if let tile @ LevelTile::Color(_, _, _) = get_tile(&level, current_coord.cast().unwrap()) {
+                    hit = Some((pot_hit, tile));
                     break;
                 }
             }
 
             let perp_wall_dist = match hit {
-                Some(Axis::X) => Some((0.5 + (current_coord.x as f32) - cam_pos.x - (step.x as f32)/2.0) / ray_dir.x),
-                Some(Axis::Y) => Some((0.5 + (current_coord.y as f32) - cam_pos.y - (step.y as f32)/2.0) / ray_dir.y),
+                Some((Axis::X, tile)) => Some(((0.5 + (current_coord.x as f32) - cam_pos.x - (step.x as f32)/2.0) / ray_dir.x, tile)),
+                Some((Axis::Y, tile)) => Some(((0.5 + (current_coord.y as f32) - cam_pos.y - (step.y as f32)/2.0) / ray_dir.y, tile)),
                 _ => None
             };
 
-            if let Some(d) = perp_wall_dist {
+            if let Some((d, tile)) = perp_wall_dist {
                 let h_mid = (height / 2) as i32;
                 let line_height = if d > 0f32 {
                     ((height as f32) / (4f32*d)) as i32
                 } else {
                     height as i32
                 };
-                canvas.draw_line((x, h_mid + line_height), (x, h_mid - line_height)).unwrap();
+                match tile {
+                    LevelTile::Color(r,g,b) => {
+                        canvas.set_draw_color(Color::RGB(r,g,b));
+                        canvas.draw_line((x, h_mid + line_height), (x, h_mid - line_height)).unwrap();
+                    },
+                    _ => {}, 
+                }
             }
         }
 
         if debug_view {
-            canvas.set_draw_color(Color::RGB(0, 0, 0));
+            canvas.set_draw_color(Color::RGB(50, 50, 50));
             canvas.fill_rect(Some((0,0,(LEVEL_WIDTH as u32)*8,(LEVEL_HEIGHT as u32)*8).into())).unwrap();
-            canvas.set_draw_color(Color::RGB(255, 255, 255));
             for x in 0..(LEVEL_WIDTH as i32) {
                 for y in 0..(LEVEL_HEIGHT as i32) {
-                    if get_tile(level, Point2::new(x,y)) {
+                    if let LevelTile::Color(r,g,b) = get_tile(&level, Point2::new(x,y)) {
+                        canvas.set_draw_color(Color::RGB(r, g, b));
                         canvas.fill_rect(Some((x*8,y*8,8,8).into())).unwrap();
                     }
                 }
