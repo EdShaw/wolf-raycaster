@@ -38,13 +38,19 @@ pub fn main() {
 
     #[derive(Copy, Clone)]
     enum LevelTile {
-        Color(u8, u8, u8), // RGB
+        SolidTile(SolidTile),
         Empty,
     }
 
-    const RED_TILE : LevelTile = LevelTile::Color(255,0,0);
-    const GRE_TILE : LevelTile = LevelTile::Color(0,255,0);
-    const BLU_TILE : LevelTile = LevelTile::Color(0,0,255);
+    #[derive(Copy, Clone)]
+    enum SolidTile {
+        Color(u8, u8, u8), // RGB
+        //Textured(Texture), // RGB
+    }
+
+    const RED_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Color(255,0,0));
+    const GRE_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Color(0,255,0));
+    const BLU_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Color(0,0,255));
     const EMPTY    : LevelTile = LevelTile::Empty;
 
     const LEVEL_WIDTH  : usize = 16;
@@ -161,7 +167,7 @@ pub fn main() {
             );
 
             let mut current_coord = cam_coord.clone();
-            let mut hit : Option<(Axis, LevelTile)> = None;
+            let mut hit : Option<(Axis, SolidTile)> = None;
             for _iter in 0..(LEVEL_HEIGHT+LEVEL_WIDTH) {
                 let pot_hit : Axis;
                 if side_dist.x < side_dist.y {
@@ -174,8 +180,8 @@ pub fn main() {
                     pot_hit = Axis::Y
                 }
 
-                if let tile @ LevelTile::Color(_, _, _) = get_tile(&level, current_coord.cast().unwrap()) {
-                    hit = Some((pot_hit, tile));
+                if let LevelTile::SolidTile(solid_tile) = get_tile(&level, current_coord.cast().unwrap()) {
+                    hit = Some((pot_hit, solid_tile));
                     break;
                 }
             }
@@ -186,15 +192,15 @@ pub fn main() {
                 _ => None
             };
 
-            if let Some((d, tile)) = perp_wall_dist {
+            if let Some((d, solid_tile)) = perp_wall_dist {
                 let h_mid = (height / 2) as i32;
                 let line_height = if d > 0f32 {
                     ((height as f32) / (4f32*d)) as i32
                 } else {
                     height as i32
                 };
-                match tile {
-                    LevelTile::Color(r,g,b) => {
+                match solid_tile {
+                    SolidTile::Color(r,g,b) => {
                         canvas.set_draw_color(Color::RGB(r,g,b));
                         canvas.draw_line((x, h_mid + line_height), (x, h_mid - line_height)).unwrap();
                     },
@@ -208,9 +214,16 @@ pub fn main() {
             canvas.fill_rect(Some((0,0,(LEVEL_WIDTH as u32)*8,(LEVEL_HEIGHT as u32)*8).into())).unwrap();
             for x in 0..(LEVEL_WIDTH as i32) {
                 for y in 0..(LEVEL_HEIGHT as i32) {
-                    if let LevelTile::Color(r,g,b) = get_tile(&level, Point2::new(x,y)) {
-                        canvas.set_draw_color(Color::RGB(r, g, b));
-                        canvas.fill_rect(Some((x*8,y*8,8,8).into())).unwrap();
+                    match get_tile(&level, Point2::new(x,y)) {
+                        LevelTile::SolidTile(SolidTile::Color(r,g,b)) => {
+                            canvas.set_draw_color(Color::RGB(r, g, b));
+                            canvas.fill_rect(Some((x*8,y*8,8,8).into())).unwrap();
+                        },
+                        // LevelTile::Textured(r,g,b) => {
+                        //     canvas.set_draw_color(Color::RGB(r, g, b));
+                        //     canvas.fill_rect(Some((x*8,y*8,8,8).into())).unwrap();
+                        // },
+                        default => {},
                     }
                 }
             }
