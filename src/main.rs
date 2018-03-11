@@ -23,7 +23,7 @@ pub fn main() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
-    let (width, height) = (1200u32, 1000u32);
+    let (width, height) = (1000u32, 800u32);
 
     let window = video_subsystem.window("rust-sdl2 demo: Video", width, height)
         .position_centered()
@@ -227,7 +227,12 @@ pub fn main() {
 
         canvas.set_draw_color(Color::RGB(100, 50, 50));
         canvas.clear();
-        canvas.copy_ex(&texture, None, None, -90.0, None, false, false).unwrap();
+        canvas.copy_ex(&texture,
+                Some((0,0,width,height).into()),
+                Some((0,0,height,width).into()),
+                -90.0,
+                Some(((height/2) as i32, (height/2) as i32).into()),
+                false, false).unwrap();
 
         if debug_view {
             canvas.set_draw_color(Color::RGB(50, 50, 50));
