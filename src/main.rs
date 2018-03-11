@@ -4,6 +4,7 @@ extern crate cgmath;
 use sdl2::pixels::Color;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+use sdl2::pixels::PixelFormatEnum;
 use std::collections::HashSet;
 use cgmath::*;
 
@@ -32,6 +33,12 @@ pub fn main() {
 
     let mut canvas = window.into_canvas().build().unwrap();
 
+    let texture_creator = canvas.texture_creator();
+
+    // Rotated 90 degrees, allowing us to access columns.
+    let mut texture = texture_creator.create_texture_streaming(
+            PixelFormatEnum::RGB24, height, width).unwrap();
+
     let mut event_pump = sdl_context.event_pump().unwrap();
 
     let grid_size = 1.0;
@@ -45,7 +52,7 @@ pub fn main() {
     #[derive(Copy, Clone)]
     enum SolidTile {
         Color(u8, u8, u8), // RGB
-        //Textured(Texture), // RGB
+        // Textured(sdl2::surface::Surface),
     }
 
     const RED_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Color(255,0,0));
@@ -138,76 +145,89 @@ pub fn main() {
             }
         }
 
-        // Start rendering
-        canvas.set_draw_color(Color::RGB(100, 100, 100));
-        canvas.fill_rect(Some((0, 0, width, height/2).into())).unwrap();
-
-        canvas.set_draw_color(Color::RGB(50, 50, 50));
-        canvas.fill_rect(Some((0, (height/2) as i32, width, height/2).into())).unwrap();
-
         let cam_coord : Point2<i32> = (cam_pos / grid_size).cast().unwrap();
         
         let plane_vec = Vector2::new(-cam_dir.y, cam_dir.x);
 
-        for x in 0i32..(width as i32) {
-            let w = width as f32;
-            let ray_dir = cam_dir + plane_vec * (fov * (2.0*x as f32 - w)/w)  ;
+        texture.with_lock(None, |buffer: &mut [u8], pitch: usize| {
+            // Gives us `width` chunks, each of size height (pitch).
+            for (x, column) in buffer.chunks_mut(pitch).enumerate() {
+                let w = width as f32;
+                let ray_dir = cam_dir + plane_vec * (fov * (2.0*x as f32 - w)/w)  ;
 
-            let delta_dist_x = 1.0/ray_dir.x.abs();
-            let delta_dist_y = 1.0/ray_dir.y.abs();
+                let delta_dist_x = 1.0/ray_dir.x.abs();
+                let delta_dist_y = 1.0/ray_dir.y.abs();
 
-            let step = Vector2::<i32>::new(
-                if ray_dir.x > 0.0 {1} else {-1},
-                if ray_dir.y > 0.0 {1} else {-1}
-            );
+                let step = Vector2::<i32>::new(
+                    if ray_dir.x > 0.0 {1} else {-1},
+                    if ray_dir.y > 0.0 {1} else {-1}
+                );
 
-            let mut side_dist = Vector2::new(
-                if ray_dir.x > 0.0 {1.0 - cam_pos.x.fract()} else {cam_pos.x.fract()} * delta_dist_x,
-                if ray_dir.y > 0.0 {1.0 - cam_pos.y.fract()} else {cam_pos.y.fract()} * delta_dist_y,
-            );
+                let mut side_dist = Vector2::new(
+                    if ray_dir.x > 0.0 {1.0 - cam_pos.x.fract()} else {cam_pos.x.fract()} * delta_dist_x,
+                    if ray_dir.y > 0.0 {1.0 - cam_pos.y.fract()} else {cam_pos.y.fract()} * delta_dist_y,
+                );
 
-            let mut current_coord = cam_coord.clone();
-            let mut hit : Option<(Axis, SolidTile)> = None;
-            for _iter in 0..(LEVEL_HEIGHT+LEVEL_WIDTH) {
-                let pot_hit : Axis;
-                if side_dist.x < side_dist.y {
-                    side_dist.x += delta_dist_x;
-                    current_coord.x += step.x;
-                    pot_hit = Axis::X
-                } else {
-                    side_dist.y += delta_dist_y;
-                    current_coord.y += step.y;
-                    pot_hit = Axis::Y
+                let mut current_coord = cam_coord.clone();
+                let mut hit : Option<(Axis, SolidTile)> = None;
+                for _iter in 0..(LEVEL_HEIGHT+LEVEL_WIDTH) {
+                    let pot_hit : Axis;
+                    if side_dist.x < side_dist.y {
+                        side_dist.x += delta_dist_x;
+                        current_coord.x += step.x;
+                        pot_hit = Axis::X
+                    } else {
+                        side_dist.y += delta_dist_y;
+                        current_coord.y += step.y;
+                        pot_hit = Axis::Y
+                    }
+
+                    if let LevelTile::SolidTile(solid_tile) = get_tile(&level, current_coord.cast().unwrap()) {
+                        hit = Some((pot_hit, solid_tile));
+                        break;
+                    }
                 }
 
-                if let LevelTile::SolidTile(solid_tile) = get_tile(&level, current_coord.cast().unwrap()) {
-                    hit = Some((pot_hit, solid_tile));
-                    break;
-                }
-            }
-
-            let perp_wall_dist = match hit {
-                Some((Axis::X, tile)) => Some(((0.5 + (current_coord.x as f32) - cam_pos.x - (step.x as f32)/2.0) / ray_dir.x, tile)),
-                Some((Axis::Y, tile)) => Some(((0.5 + (current_coord.y as f32) - cam_pos.y - (step.y as f32)/2.0) / ray_dir.y, tile)),
-                _ => None
-            };
-
-            if let Some((d, solid_tile)) = perp_wall_dist {
-                let h_mid = (height / 2) as i32;
-                let line_height = if d > 0f32 {
-                    ((height as f32) / (4f32*d)) as i32
-                } else {
-                    height as i32
+                let perp_wall_dist = match hit {
+                    Some((Axis::X, tile)) => Some(((0.5 + (current_coord.x as f32) - cam_pos.x - (step.x as f32)/2.0) / ray_dir.x, tile)),
+                    Some((Axis::Y, tile)) => Some(((0.5 + (current_coord.y as f32) - cam_pos.y - (step.y as f32)/2.0) / ray_dir.y, tile)),
+                    _ => None
                 };
-                match solid_tile {
-                    SolidTile::Color(r,g,b) => {
-                        canvas.set_draw_color(Color::RGB(r,g,b));
-                        canvas.draw_line((x, h_mid + line_height), (x, h_mid - line_height)).unwrap();
-                    },
-                    _ => {}, 
+
+                if let Some((d, solid_tile)) = perp_wall_dist {
+                    let h_mid = (height / 2) as i32;
+                    let line_height = if d > 0.25f32 {
+                        ((height as f32) / (4f32*d)) as i32
+                    } else {
+                        height as i32
+                    };
+                    match solid_tile {
+                        SolidTile::Color(r,g,b) => {
+                            for (y,rgba) in column.chunks_mut(3).enumerate() {
+                                if y < ((height as usize) - (line_height as usize))/2 {
+                                    rgba[0] = 50;
+                                    rgba[1] = 50;
+                                    rgba[2] = 50;
+                                } else if y > (height as usize) - ((height as usize) - (line_height as usize))/2 {
+                                    rgba[0] = 100;
+                                    rgba[1] = 100;
+                                    rgba[2] = 100;
+                                } else {
+                                    rgba[0] = r;
+                                    rgba[1] = g;
+                                    rgba[2] = b;
+                                }
+                            }
+                        },
+                        _ => {}, 
+                    }
                 }
             }
-        }
+        }).unwrap();
+
+        canvas.set_draw_color(Color::RGB(100, 50, 50));
+        canvas.clear();
+        canvas.copy_ex(&texture, None, None, -90.0, None, false, false).unwrap();
 
         if debug_view {
             canvas.set_draw_color(Color::RGB(50, 50, 50));

@@ -4,5 +4,8 @@ version = "0.1.0"
 authors = ["Ed"]
 
 [dependencies]
-sdl2 = "0.31"
 cgmath = "0.16.0"
+
+[dependencies.sdl2]
+version = "0.31"
+features = ["ttf","image","gfx","mixer"]
