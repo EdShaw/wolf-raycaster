@@ -5,6 +5,8 @@ authors = ["Ed"]
 
 [dependencies]
 cgmath = "0.16.0"
+lodepng = "2.0.0"
+rgb = "0.8"
 
 [dependencies.sdl2]
 version = "0.31"

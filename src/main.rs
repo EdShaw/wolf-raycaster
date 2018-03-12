@@ -1,5 +1,7 @@
 extern crate sdl2;
 extern crate cgmath;
+extern crate lodepng;
+extern crate rgb;
 
 use sdl2::pixels::Color;
 use sdl2::event::Event;
@@ -7,16 +9,106 @@ use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 use std::collections::HashSet;
 use cgmath::*;
-
+use rgb::*;
 use std::time::Duration;
 
 fn perpendicular<T : std::ops::Neg<Output = T>>(vec : Vector2<T>) -> Vector2<T> {
     Vector2::<T::Output>::new(-vec.y, vec.x)
 }
 
+const grid_size : f32 = 1.0;
+
 enum Axis {
     X, // EW
     Y, // NS
+}
+
+#[derive(Copy, Clone)]
+enum LevelTile {
+    SolidTile(SolidTile),
+    Empty,
+}
+
+#[derive(Copy, Clone)]
+enum SolidTile {
+    Color(u8, u8, u8), // RGB
+    Textured(usize), // Texture index
+}
+
+const BST_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Textured(0));
+const RBR_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Textured(1));
+const EAG_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Textured(2));
+
+const RED_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Color(255, 0, 0));
+const GRE_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Color(0, 255, 0));
+const BLU_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Color(0, 0, 255));
+const EMPTY    : LevelTile = LevelTile::Empty;
+
+const LEVEL_WIDTH  : usize = 16;
+const LEVEL_HEIGHT : usize = 32;
+static LEVEL : [[LevelTile ; LEVEL_HEIGHT] ; LEVEL_WIDTH] = [
+    [RBR_TILE, RBR_TILE, RBR_TILE, RBR_TILE, RBR_TILE, RBR_TILE, RBR_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE],
+    [RBR_TILE, EAG_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+    [RBR_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+    [RBR_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+    [RBR_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+    [RBR_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+    [RBR_TILE, EAG_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+    [RBR_TILE, BST_TILE, BST_TILE, BST_TILE, BST_TILE, BST_TILE, GRE_TILE, GRE_TILE, EMPTY   , EMPTY   , EMPTY   , BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, EMPTY   , EMPTY   , RED_TILE],
+    [RBR_TILE, BST_TILE, BST_TILE, BST_TILE, BST_TILE, BST_TILE, GRE_TILE, GRE_TILE, EMPTY   , EMPTY   , EMPTY   , BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, EMPTY   , EMPTY   , RED_TILE],
+    [RBR_TILE, EAG_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+    [RBR_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+    [RBR_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+    [RBR_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+    [RBR_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+    [RBR_TILE, EAG_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
+    [RBR_TILE, RBR_TILE, RBR_TILE, RBR_TILE, RBR_TILE, RBR_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE],
+];
+
+// const LEVEL_WIDTH  : usize = 8;
+// const LEVEL_HEIGHT : usize = 8;
+// let level : [[bool ; 8] ; 8] = [
+//     [true,  true,  false, true,  false, false, false, false],
+//     [true,  false, false, false, false, false, false, false],    
+//     [false, false, false, false, false, false, false, false],    
+//     [true,  false, false, false, false, false, false, false],    
+//     [false, false, false, false, false, false, false, false],    
+//     [true,  false, false, false, false, false, false, false],    
+//     [false, false, false, false, false, false, false, true ],    
+//     [true,  false, false, false, false, false, true,  true ],    
+// ];
+
+fn get_tile(ref level : &[[LevelTile ; LEVEL_HEIGHT] ; LEVEL_WIDTH], coord : Point2<i32>) -> LevelTile {
+    if coord.x >= 0 && coord.x < (LEVEL_WIDTH as i32) && coord.y >= 0 && coord.y < (LEVEL_HEIGHT as i32) {
+        level[coord.x as usize][coord.y as usize]
+    } else {
+        EMPTY
+    }
+}
+
+type Tex = [u8 ; 64*64*3];
+fn load_textures() -> Vec<Tex> {
+    let bluestone : lodepng::Bitmap<lodepng::RGB<u8>> = lodepng::decode24_file("wolftex/rot-bluestone.png").unwrap();
+    let redbrick : lodepng::Bitmap<lodepng::RGB<u8>> = lodepng::decode24_file("wolftex/rot-redbrick.png").unwrap();
+    let eagle : lodepng::Bitmap<lodepng::RGB<u8>> = lodepng::decode24_file("wolftex/rot-eagle.png").unwrap();
+
+    let mut bluestone_buf : Tex = [0; 64*64*3];
+    let mut redbrick_buf : Tex = [0; 64*64*3];
+    let mut eagle_buf : Tex = [0; 64*64*3];
+
+    println!("bluestone: {}x{}", bluestone.width, bluestone.height);
+    println!("bluestone: {}", bluestone.buffer.as_bytes().len());
+    println!("bluestone_buf: {}", bluestone_buf.len());
+
+    bluestone_buf.copy_from_slice(bluestone.buffer.as_bytes());
+    redbrick_buf.copy_from_slice(redbrick.buffer.as_bytes());
+    eagle_buf.copy_from_slice(eagle.buffer.as_bytes());
+
+    return vec![
+        bluestone_buf,
+        redbrick_buf,
+        eagle_buf,
+    ];
 }
 
 pub fn main() {
@@ -41,69 +133,9 @@ pub fn main() {
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let grid_size = 1.0;
-
-    #[derive(Copy, Clone)]
-    enum LevelTile {
-        SolidTile(SolidTile),
-        Empty,
-    }
-
-    #[derive(Copy, Clone)]
-    enum SolidTile {
-        Color(u8, u8, u8), // RGB
-        // Textured(sdl2::surface::Surface),
-    }
-
-    const RED_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Color(255,0,0));
-    const GRE_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Color(0,255,0));
-    const BLU_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Color(0,0,255));
-    const EMPTY    : LevelTile = LevelTile::Empty;
-
-    const LEVEL_WIDTH  : usize = 16;
-    const LEVEL_HEIGHT : usize = 32;
-    let level : [[LevelTile ; LEVEL_HEIGHT] ; LEVEL_WIDTH] = [
-        [RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE],
-        [RED_TILE, RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
-        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
-        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
-        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
-        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
-        [RED_TILE, GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
-        [RED_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, EMPTY   , EMPTY   , EMPTY   , BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, EMPTY   , EMPTY   , RED_TILE],
-        [RED_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, GRE_TILE, EMPTY   , EMPTY   , EMPTY   , BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, BLU_TILE, EMPTY   , EMPTY   , RED_TILE],
-        [RED_TILE, GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
-        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
-        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
-        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , BLU_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
-        [RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
-        [RED_TILE, RED_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , GRE_TILE, EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , EMPTY   , RED_TILE],
-        [RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE],
-    ];
-
-    // const LEVEL_WIDTH  : usize = 8;
-    // const LEVEL_HEIGHT : usize = 8;
-    // let level : [[bool ; 8] ; 8] = [
-    //     [true,  true,  false, true,  false, false, false, false],
-    //     [true,  false, false, false, false, false, false, false],    
-    //     [false, false, false, false, false, false, false, false],    
-    //     [true,  false, false, false, false, false, false, false],    
-    //     [false, false, false, false, false, false, false, false],    
-    //     [true,  false, false, false, false, false, false, false],    
-    //     [false, false, false, false, false, false, false, true ],    
-    //     [true,  false, false, false, false, false, true,  true ],    
-    // ];
-
-    fn get_tile(ref level : &[[LevelTile ; LEVEL_HEIGHT] ; LEVEL_WIDTH], coord : Point2<i32>) -> LevelTile {
-        if coord.x >= 0 && coord.x < (LEVEL_WIDTH as i32) && coord.y >= 0 && coord.y < (LEVEL_HEIGHT as i32) {
-            level[coord.x as usize][coord.y as usize]
-        } else {
-            EMPTY
-        }
-    }
-
     let mut debug_view = false;
 
+    let texture_manager = load_textures();
 
     // Camera position and direction vector.
     let mut cam_pos = Point2::<f32>::new(6.0, 6.0);
@@ -182,22 +214,22 @@ pub fn main() {
                         pot_hit = Axis::Y
                     }
 
-                    if let LevelTile::SolidTile(solid_tile) = get_tile(&level, current_coord.cast().unwrap()) {
+                    if let LevelTile::SolidTile(solid_tile) = get_tile(&LEVEL, current_coord.cast().unwrap()) {
                         hit = Some((pot_hit, solid_tile));
                         break;
                     }
                 }
 
                 let perp_wall_dist = match hit {
-                    Some((Axis::X, tile)) => Some(((0.5 + (current_coord.x as f32) - cam_pos.x - (step.x as f32)/2.0) / ray_dir.x, tile)),
-                    Some((Axis::Y, tile)) => Some(((0.5 + (current_coord.y as f32) - cam_pos.y - (step.y as f32)/2.0) / ray_dir.y, tile)),
+                    Some((side@Axis::X, tile)) => Some(((0.5 + (current_coord.x as f32) - cam_pos.x - (step.x as f32)/2.0) / ray_dir.x, side, tile)),
+                    Some((side@Axis::Y, tile)) => Some(((0.5 + (current_coord.y as f32) - cam_pos.y - (step.y as f32)/2.0) / ray_dir.y, side, tile)),
                     _ => None
                 };
 
-                if let Some((d, solid_tile)) = perp_wall_dist {
+                if let Some((d, dir, solid_tile)) = perp_wall_dist {
                     let h_mid = (height / 2) as i32;
-                    let line_height = if d > 0.25f32 {
-                        ((height as f32) / (4f32*d)) as i32
+                    let line_height = if d > 0.5f32 {
+                        ((height as f32) / (2f32*d)) as i32
                     } else {
                         height as i32
                     };
@@ -205,17 +237,35 @@ pub fn main() {
                         SolidTile::Color(r,g,b) => {
                             for (y,rgba) in column.chunks_mut(3).enumerate() {
                                 if y < ((height as usize) - (line_height as usize))/2 {
-                                    rgba[0] = 50;
-                                    rgba[1] = 50;
-                                    rgba[2] = 50;
+                                    rgba.copy_from_slice(&[50, 50, 50]);
                                 } else if y > (height as usize) - ((height as usize) - (line_height as usize))/2 {
-                                    rgba[0] = 100;
-                                    rgba[1] = 100;
-                                    rgba[2] = 100;
+                                    rgba.copy_from_slice(&[100, 100, 100]);
                                 } else {
-                                    rgba[0] = r;
-                                    rgba[1] = g;
-                                    rgba[2] = b;
+                                    rgba.copy_from_slice(&[r, g, b]);
+                                }
+                            }
+                        },
+                        SolidTile::Textured(index) => {
+                            // TODO: No-Float
+                            let wall_x = match dir {
+                                Axis::X => {cam_pos.y + d * ray_dir.y},
+                                Axis::Y => {cam_pos.x + d * ray_dir.x},
+                            }.fract().max(0.0).min(1.0);
+                            
+                            let x_offset = (wall_x * 64.0) as usize;
+
+                            for (y,rgba) in column.chunks_mut(3).enumerate() {
+                                // gap_top == gap_bottom due to symmatry. May be revisted if we shear for vertical look.
+                                let gap_top = ((height as usize) - (line_height as usize))/2;
+                                if y < gap_top {
+                                    rgba.copy_from_slice(&[50, 50, 50]);
+                                } else if y > (height as usize) - gap_top {
+                                    rgba.copy_from_slice(&[100, 100, 100]);
+                                } else {
+                                    let y_offset = 63 - (63 * (y - gap_top) / (line_height as usize)).max(0).min(63);
+
+                                    let tex_column = &texture_manager[index][x_offset*3*64..(x_offset*3*64 + 64*3)];
+                                    rgba.copy_from_slice(&tex_column[y_offset*3..(y_offset*3+3)]);
                                 }
                             }
                         },
@@ -239,15 +289,15 @@ pub fn main() {
             canvas.fill_rect(Some((0,0,(LEVEL_WIDTH as u32)*8,(LEVEL_HEIGHT as u32)*8).into())).unwrap();
             for x in 0..(LEVEL_WIDTH as i32) {
                 for y in 0..(LEVEL_HEIGHT as i32) {
-                    match get_tile(&level, Point2::new(x,y)) {
+                    match get_tile(&LEVEL, Point2::new(x,y)) {
                         LevelTile::SolidTile(SolidTile::Color(r,g,b)) => {
                             canvas.set_draw_color(Color::RGB(r, g, b));
                             canvas.fill_rect(Some((x*8,y*8,8,8).into())).unwrap();
                         },
-                        // LevelTile::Textured(r,g,b) => {
-                        //     canvas.set_draw_color(Color::RGB(r, g, b));
-                        //     canvas.fill_rect(Some((x*8,y*8,8,8).into())).unwrap();
-                        // },
+                        LevelTile::SolidTile(SolidTile::Textured(_)) => {
+                            canvas.set_draw_color(Color::RGB(255, 20, 128));
+                            canvas.fill_rect(Some((x*8,y*8,8,8).into())).unwrap();
+                        },
                         default => {},
                     }
                 }
