@@ -65,19 +65,6 @@ static LEVEL : [[LevelTile ; LEVEL_HEIGHT] ; LEVEL_WIDTH] = [
     [RBR_TILE, RBR_TILE, RBR_TILE, RBR_TILE, RBR_TILE, RBR_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE, RED_TILE],
 ];
 
-// const LEVEL_WIDTH  : usize = 8;
-// const LEVEL_HEIGHT : usize = 8;
-// let level : [[bool ; 8] ; 8] = [
-//     [true,  true,  false, true,  false, false, false, false],
-//     [true,  false, false, false, false, false, false, false],    
-//     [false, false, false, false, false, false, false, false],    
-//     [true,  false, false, false, false, false, false, false],    
-//     [false, false, false, false, false, false, false, false],    
-//     [true,  false, false, false, false, false, false, false],    
-//     [false, false, false, false, false, false, false, true ],    
-//     [true,  false, false, false, false, false, true,  true ],    
-// ];
-
 fn get_tile(ref level : &[[LevelTile ; LEVEL_HEIGHT] ; LEVEL_WIDTH], coord : Point2<i32>) -> LevelTile {
     if coord.x >= 0 && coord.x < (LEVEL_WIDTH as i32) && coord.y >= 0 && coord.y < (LEVEL_HEIGHT as i32) {
         level[coord.x as usize][coord.y as usize]
