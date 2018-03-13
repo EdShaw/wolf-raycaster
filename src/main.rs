@@ -223,9 +223,13 @@ pub fn main() {
                     match solid_tile {
                         SolidTile::Color(r,g,b) => {
                             for (y,rgba) in column.chunks_mut(3).enumerate() {
-                                if y < ((height as usize) - (line_height as usize))/2 {
+                                // gap_top == gap_bottom due to symmatry. May be revisted if we shear for vertical look.
+                                let gap_top = ((height as i32) - line_height)/2;
+                                let gap_top_u = gap_top.max(0) as usize;
+
+                                if y < gap_top_u {
                                     rgba.copy_from_slice(&[50, 50, 50]);
-                                } else if y > (height as usize) - ((height as usize) - (line_height as usize))/2 {
+                                } else if y > (height as usize) - gap_top_u {
                                     rgba.copy_from_slice(&[100, 100, 100]);
                                 } else {
                                     rgba.copy_from_slice(&[r, g, b]);
@@ -245,6 +249,7 @@ pub fn main() {
                                 // gap_top == gap_bottom due to symmatry. May be revisted if we shear for vertical look.
                                 let gap_top = ((height as i32) - line_height)/2;
                                 let gap_top_u = gap_top.max(0) as usize;
+
                                 if y < gap_top_u {
                                     rgba.copy_from_slice(&[50, 50, 50]);
                                 } else if y > (height as usize) - gap_top_u {
