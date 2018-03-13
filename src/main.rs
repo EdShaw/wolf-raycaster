@@ -215,7 +215,7 @@ pub fn main() {
 
                 if let Some((d, dir, solid_tile)) = perp_wall_dist {
                     let h_mid = (height / 2) as i32;
-                    let line_height = if d > 0.5f32 {
+                    let line_height = if d > 0f32 {
                         ((height as f32) / (2f32*d)) as i32
                     } else {
                         height as i32
@@ -243,13 +243,14 @@ pub fn main() {
 
                             for (y,rgba) in column.chunks_mut(3).enumerate() {
                                 // gap_top == gap_bottom due to symmatry. May be revisted if we shear for vertical look.
-                                let gap_top = ((height as usize) - (line_height as usize))/2;
-                                if y < gap_top {
+                                let gap_top = ((height as i32) - line_height)/2;
+                                let gap_top_u = gap_top.max(0) as usize;
+                                if y < gap_top_u {
                                     rgba.copy_from_slice(&[50, 50, 50]);
-                                } else if y > (height as usize) - gap_top {
+                                } else if y > (height as usize) - gap_top_u {
                                     rgba.copy_from_slice(&[100, 100, 100]);
                                 } else {
-                                    let y_offset = 63 - (64 * (y - gap_top) / (line_height as usize)).max(0).min(63);
+                                    let y_offset = 63 - (64 * ((y as i32) - gap_top) / (line_height)).max(0).min(63) as usize;
 
                                     let tex_column = &texture_manager[index][x_offset*3*64..(x_offset*3*64 + 64*3)];
                                     rgba.copy_from_slice(&tex_column[y_offset*3..(y_offset*3+3)]);
