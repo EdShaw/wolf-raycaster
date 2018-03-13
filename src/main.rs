@@ -249,7 +249,7 @@ pub fn main() {
                                 } else if y > (height as usize) - gap_top {
                                     rgba.copy_from_slice(&[100, 100, 100]);
                                 } else {
-                                    let y_offset = 63 - (63 * (y - gap_top) / (line_height as usize)).max(0).min(63);
+                                    let y_offset = 63 - (64 * (y - gap_top) / (line_height as usize)).max(0).min(63);
 
                                     let tex_column = &texture_manager[index][x_offset*3*64..(x_offset*3*64 + 64*3)];
                                     rgba.copy_from_slice(&tex_column[y_offset*3..(y_offset*3+3)]);
