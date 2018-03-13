@@ -216,7 +216,7 @@ pub fn main() {
                 if let Some((d, dir, solid_tile)) = perp_wall_dist {
                     let h_mid = (height / 2) as i32;
                     let line_height = if d > 0f32 {
-                        ((height as f32) / (2f32*d)) as i32
+                        ((height as f32) / (2.0_f32.sqrt() * d)) as i32
                     } else {
                         height as i32
                     };
