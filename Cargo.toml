@@ -1,7 +1,8 @@
 [package]
 name = "raycaster"
 version = "0.1.0"
-authors = ["Ed"]
+authors = ["Edward Shaw"]
+license = "MIT"
 
 [dependencies]
 cgmath = "0.16.0"

@@ -73,15 +73,18 @@ fn get_tile(ref level : &[[LevelTile ; LEVEL_HEIGHT] ; LEVEL_WIDTH], coord : Poi
     }
 }
 
-type Tex = [u8 ; 64*64*3];
-fn load_textures() -> Vec<Tex> {
-    let bluestone : lodepng::Bitmap<lodepng::RGB<u8>> = lodepng::decode24_file("wolftex/rot-bluestone.png").unwrap();
-    let redbrick : lodepng::Bitmap<lodepng::RGB<u8>> = lodepng::decode24_file("wolftex/rot-redbrick.png").unwrap();
-    let eagle : lodepng::Bitmap<lodepng::RGB<u8>> = lodepng::decode24_file("wolftex/rot-eagle.png").unwrap();
+const TEX_WIDTH : usize = 128;
+const TEX_HEIGHT : usize = TEX_WIDTH;
 
-    let mut bluestone_buf : Tex = [0; 64*64*3];
-    let mut redbrick_buf : Tex = [0; 64*64*3];
-    let mut eagle_buf : Tex = [0; 64*64*3];
+type Tex = [u8 ; TEX_WIDTH*TEX_HEIGHT*3];
+fn load_textures() -> Vec<Tex> {
+    let bluestone : lodepng::Bitmap<lodepng::RGB<u8>> = lodepng::decode24_file("assets/freedoom/patches/brick.png").unwrap();
+    let redbrick : lodepng::Bitmap<lodepng::RGB<u8>> = lodepng::decode24_file("assets/freedoom/patches/brick.png").unwrap();
+    let eagle : lodepng::Bitmap<lodepng::RGB<u8>> = lodepng::decode24_file("assets/freedoom/patches/brick.png").unwrap();
+
+    let mut bluestone_buf : Tex = [0; TEX_WIDTH*TEX_HEIGHT*3];
+    let mut redbrick_buf : Tex = [0; TEX_WIDTH*TEX_HEIGHT*3];
+    let mut eagle_buf : Tex = [0; TEX_WIDTH*TEX_HEIGHT*3];
 
     println!("bluestone: {}x{}", bluestone.width, bluestone.height);
     println!("bluestone: {}", bluestone.buffer.as_bytes().len());
@@ -243,7 +246,7 @@ pub fn main() {
                                 Axis::Y => {cam_pos.x + d * ray_dir.x},
                             }.fract().max(0.0).min(1.0);
                             
-                            let x_offset = (wall_x * 64.0) as usize;
+                            let x_offset = (wall_x * (TEX_WIDTH as f32)) as usize;
 
                             for (y,rgba) in column.chunks_mut(3).enumerate() {
                                 // gap_top == gap_bottom due to symmatry. May be revisted if we shear for vertical look.
@@ -255,9 +258,9 @@ pub fn main() {
                                 } else if y > (height as usize) - gap_top_u {
                                     rgba.copy_from_slice(&[100, 100, 100]);
                                 } else {
-                                    let y_offset = 63 - (64 * ((y as i32) - gap_top) / (line_height)).max(0).min(63) as usize;
+                                    let y_offset = (TEX_HEIGHT - 1) - ((TEX_HEIGHT as i32) * ((y as i32) - gap_top) / (line_height)).max(0).min((TEX_HEIGHT-1) as i32) as usize;
 
-                                    let tex_column = &texture_manager[index][x_offset*3*64..(x_offset*3*64 + 64*3)];
+                                    let tex_column = &texture_manager[index][x_offset*3*TEX_WIDTH..(x_offset*3*TEX_WIDTH + TEX_WIDTH*3)];
                                     rgba.copy_from_slice(&tex_column[y_offset*3..(y_offset*3+3)]);
                                 }
                             }
