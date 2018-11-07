@@ -2,6 +2,7 @@ extern crate sdl2;
 extern crate cgmath;
 extern crate lodepng;
 extern crate rgb;
+extern crate freetype;
 
 use sdl2::pixels::Color;
 use sdl2::event::Event;
@@ -11,6 +12,7 @@ use std::collections::HashSet;
 use cgmath::*;
 use rgb::*;
 use std::time::Duration;
+use std::time::Instant;
 
 fn perpendicular<T : std::ops::Neg<Output = T>>(vec : Vector2<T>) -> Vector2<T> {
     Vector2::<T::Output>::new(-vec.y, vec.x)
@@ -86,10 +88,6 @@ fn load_textures() -> Vec<Tex> {
     let mut redbrick_buf : Tex = [0; TEX_WIDTH*TEX_HEIGHT*3];
     let mut eagle_buf : Tex = [0; TEX_WIDTH*TEX_HEIGHT*3];
 
-    println!("bluestone: {}x{}", bluestone.width, bluestone.height);
-    println!("bluestone: {}", bluestone.buffer.as_bytes().len());
-    println!("bluestone_buf: {}", bluestone_buf.len());
-
     bluestone_buf.copy_from_slice(bluestone.buffer.as_bytes());
     redbrick_buf.copy_from_slice(redbrick.buffer.as_bytes());
     eagle_buf.copy_from_slice(eagle.buffer.as_bytes());
@@ -110,11 +108,12 @@ pub fn main() {
     let window = video_subsystem.window("rust-sdl2 demo: Video", width, height)
         .position_centered()
         .opengl()
+        .allow_highdpi()
         .build()
         .unwrap();
 
+    let (width, height) = window.drawable_size();
     let mut canvas = window.into_canvas().build().unwrap();
-
     let texture_creator = canvas.texture_creator();
 
     // Rotated 90 degrees, allowing us to access columns.
@@ -127,6 +126,12 @@ pub fn main() {
 
     let texture_manager = load_textures();
 
+    // Text rendering
+    // Init freetype
+    let lib = freetype::Library::init().expect("Failed to load freetype");
+    // Load a font face
+    let face = lib.new_face("../common/Roboto_Mono/RobotoMono-Regular.ttf", 0).expect("Failed to load RobotoMono-Regular");
+
     // Camera position and direction vector.
     let mut cam_pos = Point2::<f32>::new(6.0, 6.0);
     let mut cam_dir = Vector2::<f32>::new(-1.0, -1.0).normalize();
@@ -135,11 +140,21 @@ pub fn main() {
     // This is 1/2 screen size when one unit away from camera.
     let fov = 1.0; // 90 degrees
 
+    let mut instant = Instant::now();
+
     'running: loop {
+        let next_instant = Instant::now();
+        let duration = next_instant.duration_since(instant);
+        instant = next_instant;
+
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..} | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                     break 'running
+                },
+                // Toggle debug
+                Event::KeyDown { keycode: Some(Keycode::M), ..} => {
+                    debug_view = !debug_view
                 },
                 _ => {}
             }
@@ -152,8 +167,6 @@ pub fn main() {
 
         for key in &keys {
             match key {
-                &Keycode::M => { debug_view = !debug_view; },
-
                 &Keycode::W => { cam_pos += cam_dir * 0.05; },
                 &Keycode::S => { cam_pos -= cam_dir * 0.05; },
                 &Keycode::A => { cam_pos -= perpendicular(cam_dir) * 0.05; },
@@ -290,8 +303,9 @@ pub fn main() {
                             canvas.set_draw_color(Color::RGB(r, g, b));
                             canvas.fill_rect(Some((x*8,y*8,8,8).into())).unwrap();
                         },
-                        LevelTile::SolidTile(SolidTile::Textured(_)) => {
-                            canvas.set_draw_color(Color::RGB(255, 20, 128));
+                        LevelTile::SolidTile(SolidTile::Textured(index)) => {
+                            let texture = &texture_manager[index];
+                            canvas.set_draw_color(Color::RGB(texture[0], texture[1], texture[2]));
                             canvas.fill_rect(Some((x*8,y*8,8,8).into())).unwrap();
                         },
                         default => {},
@@ -305,11 +319,63 @@ pub fn main() {
             let debug_cam_dir_v = cam_dir * 8.0;  
             let debug_cam_dir = sdl2::rect::Point::new(debug_cam_dir_v.x as i32, debug_cam_dir_v.y as i32);
             canvas.draw_line(debug_cam_pos, debug_cam_pos + debug_cam_dir).unwrap();
+            
+            // Frame time
+            let duration = duration.as_secs() * 1_000 + (duration.subsec_millis() as u64);
+            let duration = duration.to_string();
+            let mut p = ((width-20) as i32, 10, 24, 24).into();
+            for ch in duration.chars().rev() {
+                draw_glyph(&mut canvas, &texture_creator, &face, ch, p);
+                p.offset(-24, 0)
+            }
         }
 
         canvas.present();
-        
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
-        // The rest of the game loop goes here...
     }
+}
+
+
+fn draw_glyph<T : sdl2::render::RenderTarget, U>(
+        canvas: &mut sdl2::render::Canvas<T>,
+        texture_creator: &sdl2::render::TextureCreator<U>,
+        face: &freetype::Face,
+        ch: char,
+        pos: sdl2::rect::Rect,
+) {
+    // Set the font size
+    let size = 24 as usize;
+    face.set_pixel_sizes(size as u32, size as u32).unwrap();
+    face.load_char(ch as usize, freetype::face::LoadFlag::RENDER).unwrap();
+    // Get the glyph instance
+    let glyph = face.glyph();
+    let bitmap = glyph.bitmap();
+    let pix_mode = bitmap.pixel_mode().unwrap();
+
+    let b_width = bitmap.width() as usize;
+    let b_height = bitmap.rows() as usize;
+    let b_pitch = bitmap.pitch() as usize;
+    let b_buf = bitmap.buffer();
+
+    let x = glyph.bitmap_left() as usize;
+    let y = b_height - glyph.bitmap_top() as usize;
+
+    let mut glyph_tex = texture_creator.create_texture_streaming(PixelFormatEnum::ARGB8888, size as u32, size as u32).unwrap();
+    glyph_tex.with_lock(None, |buf: &mut [u8], pitch: usize|{
+        for j in 0..size {
+            for i in 0..size {
+                buf[(4*i + j*pitch) + 0] = 0;
+                buf[(4*i + j*pitch) + 1] = 0;
+                buf[(4*i + j*pitch) + 2] = 0;
+                if i < b_width && j < b_height {
+                    buf[(4*i + j*pitch) + 3] = b_buf[i + j*b_pitch];
+                } else {
+                    buf[(4*i + j*pitch) + 3] = 0;
+                }
+            }
+        }
+    }).unwrap();
+
+    glyph_tex.set_blend_mode(sdl2::render::BlendMode::Blend);
+    canvas.copy(&glyph_tex, None, Some(pos)).unwrap();
+
 }
