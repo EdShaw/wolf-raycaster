@@ -11,14 +11,13 @@ use sdl2::pixels::PixelFormatEnum;
 use std::collections::HashSet;
 use cgmath::*;
 use rgb::*;
-use std::time::Duration;
 use std::time::Instant;
 
 fn perpendicular<T : std::ops::Neg<Output = T>>(vec : Vector2<T>) -> Vector2<T> {
     Vector2::<T::Output>::new(-vec.y, vec.x)
 }
 
-const grid_size : f32 = 1.0;
+const GRID_SIZE : f32 = 1.0;
 
 enum Axis {
     X, // EW
@@ -180,7 +179,7 @@ pub fn main() {
             }
         }
 
-        let cam_coord : Point2<i32> = (cam_pos / grid_size).cast().unwrap();
+        let cam_coord : Point2<i32> = (cam_pos / GRID_SIZE).cast().unwrap();
         
         let plane_vec = Vector2::new(-cam_dir.y, cam_dir.x);
 
@@ -230,7 +229,6 @@ pub fn main() {
                 };
 
                 if let Some((d, dir, solid_tile)) = perp_wall_dist {
-                    let h_mid = (height / 2) as i32;
                     let line_height = if d > 0f32 {
                         ((height as f32) / (2.0_f32.sqrt() * d)) as i32
                     } else {
@@ -278,7 +276,6 @@ pub fn main() {
                                 }
                             }
                         },
-                        _ => {}, 
                     }
                 }
             }
@@ -308,7 +305,7 @@ pub fn main() {
                             canvas.set_draw_color(Color::RGB(texture[0], texture[1], texture[2]));
                             canvas.fill_rect(Some((x*8,y*8,8,8).into())).unwrap();
                         },
-                        default => {},
+                        LevelTile::Empty => {},
                     }
                 }
             }
@@ -349,15 +346,17 @@ fn draw_glyph<T : sdl2::render::RenderTarget, U>(
     // Get the glyph instance
     let glyph = face.glyph();
     let bitmap = glyph.bitmap();
-    let pix_mode = bitmap.pixel_mode().unwrap();
+    // TODO:
+    let _pix_mode = bitmap.pixel_mode().unwrap();
 
     let b_width = bitmap.width() as usize;
     let b_height = bitmap.rows() as usize;
     let b_pitch = bitmap.pitch() as usize;
     let b_buf = bitmap.buffer();
 
-    let x = glyph.bitmap_left() as usize;
-    let y = b_height - glyph.bitmap_top() as usize;
+    // Also TODO:
+    let _x = glyph.bitmap_left() as usize;
+    let _y = b_height - glyph.bitmap_top() as usize;
 
     let mut glyph_tex = texture_creator.create_texture_streaming(PixelFormatEnum::ARGB8888, size as u32, size as u32).unwrap();
     glyph_tex.with_lock(None, |buf: &mut [u8], pitch: usize|{
@@ -377,5 +376,4 @@ fn draw_glyph<T : sdl2::render::RenderTarget, U>(
 
     glyph_tex.set_blend_mode(sdl2::render::BlendMode::Blend);
     canvas.copy(&glyph_tex, None, Some(pos)).unwrap();
-
 }
