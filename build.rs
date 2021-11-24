@@ -11,7 +11,7 @@ fn main() {
     println!("cargo:rustc-link-search=all={}", lib_dir.display());
 
     let mut dll_dir_path = manifest_dir.clone();
-    dll_dir_path.push("dll");
+    dll_dir_path.push("lib");
     dll_dir_path.push(target);
 
     if let Ok(dll_dir) = std::fs::read_dir(dll_dir_path) {
