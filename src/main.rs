@@ -260,7 +260,7 @@ pub fn main() {
                             let x_offset = (wall_x * (TEX_WIDTH as f32)) as usize;
 
                             for (y,rgba) in column.chunks_mut(3).enumerate() {
-                                // gap_top == gap_bottom due to symmatry. May be revisted if we shear for vertical look.
+                                // gap_top == gap_bottom due to symmetry. May be revisted if we shear for vertical look.
                                 let gap_top = ((height as i32) - line_height)/2;
                                 let gap_top_u = gap_top.max(0) as usize;
 
