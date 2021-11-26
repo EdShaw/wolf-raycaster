@@ -40,6 +40,9 @@ const BST_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Textured(0));
 const RBR_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Textured(1));
 const EAG_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Textured(2));
 
+const CEIL : [u8; 3] = [50, 50, 50];
+const FLOOR : [u8; 3] = [100, 100, 100];
+
 const RED_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Color(255, 0, 0));
 const GRE_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Color(0, 255, 0));
 const BLU_TILE : LevelTile = LevelTile::SolidTile(SolidTile::Color(0, 0, 255));
@@ -80,8 +83,8 @@ const TEX_HEIGHT : usize = TEX_WIDTH;
 type Tex = [u8 ; TEX_WIDTH*TEX_HEIGHT*3];
 fn load_textures() -> Vec<Tex> {
     let bluestone : lodepng::Bitmap<lodepng::RGB<u8>> = lodepng::decode24_file("assets/freedoom/patches/brick.png").unwrap();
-    let redbrick : lodepng::Bitmap<lodepng::RGB<u8>> = lodepng::decode24_file("assets/freedoom/patches/brick.png").unwrap();
-    let eagle : lodepng::Bitmap<lodepng::RGB<u8>> = lodepng::decode24_file("assets/freedoom/patches/brick.png").unwrap();
+    let redbrick : lodepng::Bitmap<lodepng::RGB<u8>> = lodepng::decode24_file("assets/freedoom/patches/brick1.png").unwrap();
+    let eagle : lodepng::Bitmap<lodepng::RGB<u8>> = lodepng::decode24_file("assets/freedoom/patches/brick2.png").unwrap();
 
     let mut bluestone_buf : Tex = [0; TEX_WIDTH*TEX_HEIGHT*3];
     let mut redbrick_buf : Tex = [0; TEX_WIDTH*TEX_HEIGHT*3];
@@ -229,25 +232,33 @@ pub fn main() {
                 };
 
                 if let Some((d, dir, solid_tile)) = perp_wall_dist {
-                    let line_height = if d > 0f32 {
-                        ((height as f32) / (2.0_f32.sqrt() * d)) as i32
+                    // Line height assumed to be the "full" level height. Will need to change for shorter walls.
+                    let line_height = 
+                        ((height as f32) / (2.0_f32.sqrt() * d)) as i32;
+
+                    // gap_top == gap_bottom due to symmetry. May be revisted if we shear for vertical look.
+                    let gap_top = (height as i32 - line_height)/2;
+                    let gap_top_u = gap_top.max(0) as usize;
+
+                    let (top, rem) = column.split_at_mut(gap_top_u*3);
+                    let (middle, bottom) = if line_height < (rem.len()/3) as i32 {
+                        rem.split_at_mut(3*line_height as usize)
                     } else {
-                        height as i32
-                    };
+                        (rem, &mut [][..])
+                    };   
+
+
+
                     match solid_tile {
                         SolidTile::Color(r,g,b) => {
-                            for (y,rgba) in column.chunks_mut(3).enumerate() {
-                                // gap_top == gap_bottom due to symmatry. May be revisted if we shear for vertical look.
-                                let gap_top = ((height as i32) - line_height)/2;
-                                let gap_top_u = gap_top.max(0) as usize;
-
-                                if y < gap_top_u {
-                                    rgba.copy_from_slice(&[50, 50, 50]);
-                                } else if y > (height as usize) - gap_top_u {
-                                    rgba.copy_from_slice(&[100, 100, 100]);
-                                } else {
-                                    rgba.copy_from_slice(&[r, g, b]);
-                                }
+                            for rgb in top.chunks_exact_mut(3) {
+                                rgb.copy_from_slice(&CEIL);
+                            }
+                            for rgb in middle.chunks_exact_mut(3) {
+                                rgb.copy_from_slice(&[r, g, b]);
+                            }
+                            for rgb in bottom.chunks_exact_mut(3) {
+                                rgb.copy_from_slice(&FLOOR);
                             }
                         },
                         SolidTile::Textured(index) => {
@@ -259,21 +270,22 @@ pub fn main() {
                             
                             let x_offset = (wall_x * (TEX_WIDTH as f32)) as usize;
 
-                            for (y,rgba) in column.chunks_mut(3).enumerate() {
-                                // gap_top == gap_bottom due to symmetry. May be revisted if we shear for vertical look.
-                                let gap_top = ((height as i32) - line_height)/2;
-                                let gap_top_u = gap_top.max(0) as usize;
-
-                                if y < gap_top_u {
-                                    rgba.copy_from_slice(&[50, 50, 50]);
-                                } else if y > (height as usize) - gap_top_u {
-                                    rgba.copy_from_slice(&[100, 100, 100]);
+                            for rgb in top.chunks_exact_mut(3) {
+                                rgb.copy_from_slice(&CEIL);
+                            }
+                            for (y, rgb) in middle.chunks_exact_mut(3).enumerate() {
+                                let y = if gap_top < 0 {
+                                    y as i32 - gap_top
                                 } else {
-                                    let y_offset = (TEX_HEIGHT - 1) - ((TEX_HEIGHT as i32) * ((y as i32) - gap_top) / (line_height)).max(0).min((TEX_HEIGHT-1) as i32) as usize;
+                                    y as i32
+                                };
+                                let y_offset = (TEX_HEIGHT - 1) - ((TEX_HEIGHT as i32) * y / (line_height)).max(0).min((TEX_HEIGHT-1) as i32) as usize;
 
-                                    let tex_column = &texture_manager[index][x_offset*3*TEX_WIDTH..(x_offset*3*TEX_WIDTH + TEX_WIDTH*3)];
-                                    rgba.copy_from_slice(&tex_column[y_offset*3..(y_offset*3+3)]);
-                                }
+                                let tex_column = &texture_manager[index][x_offset*3*TEX_WIDTH..(x_offset*3*TEX_WIDTH + TEX_WIDTH*3)];
+                                rgb.copy_from_slice(&tex_column[y_offset*3..(y_offset*3+3)]);
+                            }
+                            for rgb in bottom.chunks_exact_mut(3) {
+                                rgb.copy_from_slice(&FLOOR);
                             }
                         },
                     }
