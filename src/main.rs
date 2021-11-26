@@ -269,6 +269,7 @@ pub fn main() {
                             }.fract().max(0.0).min(1.0);
                             
                             let x_offset = (wall_x * (TEX_WIDTH as f32)) as usize;
+                            let tex_column = &texture_manager[index][x_offset*3*TEX_WIDTH..(x_offset*3*TEX_WIDTH + TEX_WIDTH*3)];
 
                             for rgb in top.chunks_exact_mut(3) {
                                 rgb.copy_from_slice(&CEIL);
@@ -282,7 +283,6 @@ pub fn main() {
                                 };
                                 let y_offset = (TEX_HEIGHT - 1) - ((TEX_HEIGHT as i32) * y / (line_height)).max(0).min((TEX_HEIGHT-1) as i32) as usize;
 
-                                let tex_column = &texture_manager[index][x_offset*3*TEX_WIDTH..(x_offset*3*TEX_WIDTH + TEX_WIDTH*3)];
                                 rgb.copy_from_slice(&tex_column[y_offset*3..(y_offset*3+3)]);
                             }
                             for rgb in bottom.chunks_exact_mut(3) {
