@@ -274,6 +274,7 @@ pub fn main() {
                                 rgb.copy_from_slice(&CEIL);
                             }
                             for (y, rgb) in middle.chunks_exact_mut(3).enumerate() {
+                                // TODO: Calculating Y is too expensive. We can step y up based on line_height instead
                                 let y = if gap_top < 0 {
                                     y as i32 - gap_top
                                 } else {
